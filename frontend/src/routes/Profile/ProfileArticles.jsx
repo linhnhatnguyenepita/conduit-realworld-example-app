@@ -31,7 +31,9 @@ function ProfileArticles() {
       />
     </>
   ) : (
-    <div className="article-preview">{username} doesn't have articles.</div>
+    <div className="article-preview">
+      {username} doesn&apos;t have articles.
+    </div>
   );
 }
 

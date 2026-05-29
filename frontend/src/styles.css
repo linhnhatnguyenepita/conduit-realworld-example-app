@@ -75,7 +75,7 @@ body {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
-  font-family: 'Source Sans Pro', sans-serif;
+  font-family: "Source Sans Pro", sans-serif;
   font-size: 1rem;
   line-height: 1.5;
   color: var(--text);
@@ -184,7 +184,7 @@ p {
 }
 
 .logo-font {
-  font-family: 'Lora', serif;
+  font-family: "Lora", serif;
 }
 
 .navbar-logo {
@@ -221,9 +221,9 @@ select {
 }
 
 button,
-html input[type='button'],
-input[type='reset'],
-input[type='submit'] {
+html input[type="button"],
+input[type="reset"],
+input[type="submit"] {
   -webkit-appearance: button;
   cursor: pointer;
 }
@@ -259,7 +259,7 @@ textarea {
 a,
 area,
 button,
-[role='button'],
+[role="button"],
 input,
 label,
 select,
@@ -797,7 +797,7 @@ fieldset[disabled] a.btn {
   padding-top: 0;
   padding-bottom: 0.25rem;
   margin-right: 2rem;
-  font-family: 'Lora', serif;
+  font-family: "Lora", serif;
   font-size: 1.5rem;
   color: #222;
 }
@@ -923,7 +923,7 @@ fieldset[disabled] a.btn {
 }
 
 .card-block::after {
-  content: '';
+  content: "";
   display: table;
   clear: both;
 }
@@ -939,7 +939,7 @@ fieldset[disabled] a.btn {
 }
 
 .card-footer::after {
-  content: '';
+  content: "";
   display: table;
   clear: both;
 }
@@ -1328,7 +1328,7 @@ footer .attribution {
 }
 
 .article-page .article-content .col-md-12,
-.article-page .container.page > .row > [class*='col-'] {
+.article-page .container.page > .row > [class*="col-"] {
   padding-left: 0;
   padding-right: 0;
   flex: 0 0 100%;
@@ -1345,7 +1345,7 @@ footer > .container {
 }
 
 .article-page .article-content p {
-  font-family: 'Lora', serif;
+  font-family: "Lora", serif;
   font-size: 1.2rem;
   line-height: 1.8rem;
   margin-bottom: 2rem;

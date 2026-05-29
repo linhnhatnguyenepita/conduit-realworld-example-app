@@ -9,7 +9,7 @@ import FollowButton from "../FollowButton";
 function AuthorInfo() {
   const { state } = useLocation();
   const [{ bio, followersCount, following, image }, setAuthor] = useState(
-    state || {}
+    state || {},
   );
   const { headers, loggedUser } = useAuth();
   const { username } = useParams();
