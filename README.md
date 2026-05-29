@@ -122,6 +122,54 @@ The following command will build the production version of the app:
 npm run start
 ```
 
+## DevOps
+
+This repo ships a full DevOps layer. The design lives in
+[`docs/superpowers/specs`](docs/superpowers/specs/2026-05-30-devops-github-actions-design.md).
+
+### Local stack (Docker Compose)
+
+```bash
+cp .env.example .env      # adjust secrets as needed
+docker compose up --build
+```
+
+| Service    | URL                          | Notes                              |
+| ---------- | ---------------------------- | ---------------------------------- |
+| Frontend   | http://localhost:8080        | nginx serving the Vite build       |
+| Backend    | (internal `:3001`)           | proxied at `/api` via the frontend |
+| Health     | http://localhost:8080/api/health | liveness JSON                  |
+| Metrics    | backend `:3001/metrics`      | Prometheus exposition              |
+| Prometheus | http://localhost:9090        | scrapes the backend                |
+| Grafana    | http://localhost:3000        | admin / `$GRAFANA_ADMIN_PASSWORD`  |
+
+The **Conduit Backend** Grafana dashboard (request rate, p50/p95 latency, error
+rate, Node process metrics) is auto-provisioned.
+
+### Code quality & security
+
+```bash
+npm run lint          # ESLint (errors fail CI; warnings allowed)
+npm run format:check  # Prettier
+npm run test:coverage # Vitest + lcov coverage
+```
+
+### CI/CD (GitHub Actions)
+
+| Workflow      | Trigger             | Does                                                        |
+| ------------- | ------------------- | ----------------------------------------------------------- |
+| `ci.yml`      | PR / push to `main` | lint, test+coverage, build images, Trivy scan, SonarCloud   |
+| `codeql.yml`  | PR / push / weekly  | CodeQL SAST                                                  |
+| `release.yml` | push `main` / `v*`  | build, Trivy image scan, push images to GHCR                |
+| `uptime.yml`  | every 15 min        | health ping (opt-in via `HEALTHCHECK_URL` repo variable)    |
+
+Published images: `ghcr.io/<owner>/conduit-backend` and `…/conduit-frontend`.
+Deployment to AWS is handled separately via Ansible + Terraform.
+
+**Required setup:** add a `SONAR_TOKEN` repo secret (SonarCloud). GHCR uses the
+built-in `GITHUB_TOKEN`. Dependabot keeps npm, GitHub Actions, and Docker base
+images up to date.
+
 ## License
 
 This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
