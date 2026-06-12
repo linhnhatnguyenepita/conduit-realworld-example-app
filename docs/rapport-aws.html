@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rapport AWS — Déploiement de Conduit sur ECS Fargate</title>
+<style>
+  :root{
+    --bg:#0f172a; --bg2:#1e293b; --ink:#1f2933; --muted:#64748b;
+    --line:#e2e8f0; --card:#ffffff; --accent:#2563eb; --accent2:#0ea5e9;
+    --ok:#16a34a; --warn:#d97706; --bad:#dc2626;
+    --code:#0b1220;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;max-width:100%;overflow-x:hidden;}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    color:var(--ink); background:#f8fafc; line-height:1.6; font-size:16px;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{width:100%; max-width:1080px; margin:0 auto; padding:0 22px;}
+  header.hero{
+    width:100%; background:linear-gradient(135deg,var(--bg) 0%,var(--bg2) 60%,#243b53 100%);
+    color:#fff; padding:50px 0 42px;
+  }
+  header.hero h1{margin:0 0 8px; font-size:clamp(26px,4vw,40px); line-height:1.15; letter-spacing:-.02em;}
+  header.hero p.sub{margin:0; color:#cbd5e1; font-size:clamp(15px,2.2vw,19px);}
+  .meta{display:flex; flex-wrap:wrap; gap:10px 26px; margin-top:22px; font-size:14px; color:#e2e8f0;}
+  .meta b{color:#fff;}
+  nav.toc{
+    background:var(--card); border:1px solid var(--line); border-radius:14px;
+    padding:18px 22px; margin:28px 0; box-shadow:0 1px 3px rgba(15,23,42,.06);
+  }
+  nav.toc h2{margin:0 0 10px; font-size:15px; text-transform:uppercase; letter-spacing:.08em; color:var(--muted);}
+  nav.toc ol{margin:0; padding-left:20px; columns:2; column-gap:34px;}
+  @media(max-width:680px){nav.toc ol{columns:1;}}
+  nav.toc a{color:var(--accent); text-decoration:none;}
+  nav.toc a:hover{text-decoration:underline;}
+  section{
+    background:var(--card); border:1px solid var(--line); border-radius:14px;
+    padding:24px 28px; margin:0 0 22px; box-shadow:0 1px 3px rgba(15,23,42,.05);
+  }
+  h2.sec{margin:0 0 6px; font-size:23px; letter-spacing:-.01em; color:#0f172a;}
+  h2.sec .n{color:var(--accent); font-variant-numeric:tabular-nums; margin-right:10px;}
+  h3{margin:20px 0 8px; font-size:18px; color:#0f172a;}
+  p{margin:9px 0;}
+  ul,ol{margin:9px 0; padding-left:22px;}
+  li{margin:5px 0;}
+  ol.steps{padding-left:0; list-style:none; counter-reset:step;}
+  ol.steps>li{
+    position:relative; padding:4px 0 16px 50px; margin:0; counter-increment:step;
+    border-left:2px solid var(--line); margin-left:16px;
+  }
+  ol.steps>li:last-child{border-left:2px solid transparent;}
+  ol.steps>li::before{
+    content:counter(step); position:absolute; left:-16px; top:0;
+    width:32px; height:32px; border-radius:50%; background:var(--accent); color:#fff;
+    font-weight:700; font-size:15px; display:flex; align-items:center; justify-content:center;
+  }
+  ol.steps>li b.st{display:block; font-size:16px; color:#0f172a; margin-bottom:3px;}
+  code{background:#eef2f7; padding:1px 6px; border-radius:5px; font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-size:.88em; word-break:break-word;}
+  pre{
+    background:var(--code); color:#e6edf3; border-radius:10px; padding:15px 18px;
+    overflow-x:auto; max-width:100%; font-size:13.5px; line-height:1.55;
+    font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; margin:10px 0;
+  }
+  pre code{background:transparent; padding:0; color:inherit; font-size:inherit;}
+  .tablewrap{overflow-x:auto; max-width:100%; margin:14px 0; border:1px solid var(--line); border-radius:10px;}
+  table{border-collapse:collapse; width:100%; font-size:14.5px;}
+  th,td{text-align:left; padding:10px 13px; border-bottom:1px solid var(--line); vertical-align:top;}
+  th{background:#f1f5f9; font-weight:650; color:#0f172a;}
+  tr:last-child td{border-bottom:none;}
+  .pill{display:inline-block; padding:1px 9px; border-radius:999px; font-size:12.5px; font-weight:650; white-space:nowrap;}
+  .pill.ok{background:#dcfce7; color:#166534;}
+  .pill.no{background:#fee2e2; color:#991b1b;}
+  .pill.mid{background:#fef3c7; color:#92400e;}
+  .callout{border-left:4px solid var(--accent); background:#eff6ff; padding:13px 16px; border-radius:0 10px 10px 0; margin:16px 0;}
+  .callout.warn{border-color:var(--warn); background:#fffbeb;}
+  .callout.ok{border-color:var(--ok); background:#f0fdf4;}
+  .callout p:first-child{margin-top:0;} .callout p:last-child{margin-bottom:0;}
+  .lead{font-size:17px; color:#334155;}
+  .frame{margin:16px 0; border:1px solid var(--line); border-radius:12px; overflow:hidden; box-shadow:0 1px 3px rgba(15,23,42,.06);}
+  .frame iframe{display:block; width:100%; height:860px; border:0;}
+  .frame .cap{font-size:13px; color:var(--muted); padding:8px 14px; background:#f8fafc; border-top:1px solid var(--line);}
+  @media(max-width:680px){.frame iframe{height:600px;}}
+  .grid2{display:grid; grid-template-columns:1fr 1fr; gap:16px;}
+  @media(max-width:680px){.grid2{grid-template-columns:1fr;}}
+  footer{color:var(--muted); font-size:13.5px; text-align:center; padding:30px 0 50px;}
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="wrap">
+    <h1>Déploiement de Conduit sur AWS</h1>
+    <p class="sub">ECS Fargate multi-AZ · VPC à trois tiers · Infrastructure as Code Terraform</p>
+    <div class="meta">
+      <div><b>Application&nbsp;:</b> Conduit (clone Medium, spec RealWorld)</div>
+      <div><b>Région&nbsp;:</b> us-west-2 (Oregon)</div>
+      <div><b>Compte&nbsp;:</b> AWS Academy (voclabs)</div>
+      <div><b>IaC&nbsp;:</b> Terraform</div>
+      <div><b>Auteur&nbsp;:</b> nlnguyen</div>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+
+<nav class="toc">
+  <h2>Sommaire</h2>
+  <ol>
+    <li><a href="#guide">Guide de déploiement</a></li>
+    <li><a href="#contexte">Contexte et objectifs</a></li>
+    <li><a href="#choix">Choix de l'architecture</a></li>
+    <li><a href="#schema">Schéma d'architecture</a></li>
+    <li><a href="#technique">Réseau et composants applicatifs</a></li>
+    <li><a href="#securite">Sécurité et moindre privilège</a></li>
+    <li><a href="#resilience">Résilience, scalabilité, observabilité</a></li>
+    <li><a href="#academie">Contraintes du compte académique</a></li>
+    <li><a href="#validation">Validation et coûts</a></li>
+  </ol>
+</nav>
+
+<section id="guide">
+  <h2 class="sec"><span class="n">1</span>Guide de déploiement</h2>
+  <p class="lead">Toute l'infrastructure est décrite en Terraform (modules <code>network</code>, <code>ecr</code>, <code>rds</code>, <code>alb</code>, <code>ecs</code>). Le déploiement se fait avec <b>vos propres identifiants AWS</b>&nbsp;: grâce à l'auto-détection du compte, <b>aucun fichier de configuration n'est nécessaire</b> — Terraform déduit le <code>LabRole</code> du compte et génère automatiquement la clé JWT.</p>
+
+  <div class="callout">
+    <p><b>Prérequis.</b> <code>aws</code> CLI, <code>terraform</code> (≥ 1.5) et <code>docker</code> installés. Les commandes ci-dessous se lancent depuis le dépôt cloné. La durée totale est d'environ <b>15–20 minutes</b> (la création de RDS Multi-AZ domine ce temps).</p>
+  </div>
+
+  <ol class="steps">
+    <li>
+      <b class="st">Renseigner vos identifiants AWS</b>
+      Dans le lab AWS Academy&nbsp;: <b>AWS Details → AWS CLI</b>, puis copier le bloc <code>[default]</code> dans <code>~/.aws/credentials</code> (identifiants temporaires, à rafraîchir à chaque session). Fixer ensuite la région et vérifier&nbsp;:
+<pre><code>aws configure set region us-west-2
+aws sts get-caller-identity     # doit afficher votre compte → OK</code></pre>
+    </li>
+    <li>
+      <b class="st">Créer les dépôts d'images ECR</b>
+      Les tâches ECS ne peuvent pas démarrer avant que les images existent&nbsp;: on crée donc ECR en premier.
+<pre><code>cd infra
+terraform init
+terraform apply -target=module.ecr</code></pre>
+    </li>
+    <li>
+      <b class="st">Construire et pousser les images Docker</b>
+      Build en <code>linux/amd64</code> obligatoire (Fargate est x86_64), depuis le dossier <code>infra</code> avec la racine du dépôt comme contexte (<code>..</code>).
+<pre><code>ACCOUNT=$(aws sts get-caller-identity --query Account --output text)
+ECR=$ACCOUNT.dkr.ecr.us-west-2.amazonaws.com
+aws ecr get-login-password --region us-west-2 | docker login --username AWS --password-stdin $ECR
+docker build --platform linux/amd64 -f ../backend/Dockerfile  -t $ECR/conduit-backend:latest  ..
+docker build --platform linux/amd64 -f ../frontend/Dockerfile -t $ECR/conduit-frontend:latest ..
+docker push $ECR/conduit-backend:latest
+docker push $ECR/conduit-frontend:latest</code></pre>
+    </li>
+    <li>
+      <b class="st">Déployer toute l'infrastructure</b>
+      VPC, RDS Multi-AZ (~10–15 min), ALB et services ECS, en une commande.
+<pre><code>terraform apply</code></pre>
+    </li>
+    <li>
+      <b class="st">Vérifier le déploiement</b>
+      L'URL publique de l'ALB est exposée en sortie Terraform. La SPA doit répondre 200 et l'API renvoyer du JSON.
+<pre><code>URL="http://$(terraform output -raw alb_dns_name)"
+curl -I "$URL/"            # SPA React      → 200
+curl    "$URL/api/tags"    # backend + RDS  → JSON</code></pre>
+    </li>
+    <li>
+      <b class="st">Détruire après la démonstration</b>
+      Pour éviter toute consommation. Terraform détruit dans l'ordre inverse des dépendances&nbsp;; conserver <code>terraform.tfstate</code> jusqu'à la fin.
+<pre><code>terraform destroy</code></pre>
+    </li>
+  </ol>
+
+  <div class="callout warn">
+    <p><b>Si un jeton expire pendant un <code>apply</code>.</b> Le compte académique impose des identifiants STS temporaires. En cas d'expiration, rafraîchissez les identifiants (étape&nbsp;1) et relancez <code>terraform apply</code>&nbsp;: la commande est idempotente et reprend où elle s'était arrêtée.</p>
+  </div>
+</section>
+
+<section id="contexte">
+  <h2 class="sec"><span class="n">2</span>Contexte et objectifs</h2>
+  <p>Conduit est une application full-stack de référence (clone de Medium) implémentant la spec <a href="https://realworld.io/">RealWorld</a>. C'est un monorepo composé de deux services déjà conteneurisés&nbsp;:</p>
+  <ul>
+    <li><b>backend</b> — API REST Express 5 + PostgreSQL via Sequelize 6, endpoints authentifiés par JWT sous <code>/api</code>.</li>
+    <li><b>frontend</b> — SPA React 18 (Vite) servie par nginx&nbsp;; tous les appels API utilisent des chemins relatifs <code>/api/…</code>.</li>
+  </ul>
+  <p>Les identifiants de base de données et la clé JWT sont pilotés par variables d'environnement (<code>config/config.js</code>).</p>
+  <div class="callout">
+    <p><b>Exigence de l'énoncé.</b> Créer au minimum un VPC avec plusieurs subnets répartis sur plusieurs zones de disponibilité. L'architecture applicative est libre&nbsp;; l'objectif est une infrastructure <b>logique, robuste, résiliente et scalable</b>, en expliquant les choix, les composants et les flux (<i>least privilege</i>).</p>
+  </div>
+</section>
+
+<section id="choix">
+  <h2 class="sec"><span class="n">3</span>Choix de l'architecture</h2>
+  <p>Critère central&nbsp;: <b>maximiser résilience et scalabilité sans réécrire l'application</b>, qui est déjà conteneurisée.</p>
+  <div class="tablewrap">
+  <table>
+    <thead><tr><th>Option</th><th>Décision</th><th>Justification</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><b>ECS Fargate + ALB + RDS</b></td>
+        <td><span class="pill ok">Retenu</span></td>
+        <td>Les conteneurs tournent tels quels, sans réarchitecture. Fargate supprime toute gestion d'OS (pas d'AMI à patcher). Multi-AZ et auto-scaling natifs. Meilleur ratio effort/résilience.</td>
+      </tr>
+      <tr>
+        <td>EC2 Auto Scaling Group + ALB</td>
+        <td><span class="pill no">Écarté</span></td>
+        <td>Introduit la gestion d'AMI/OS et des launch templates sans bénéfice à cette échelle&nbsp;: gérer des serveurs pour exécuter des conteneurs est inférieur à Fargate ici.</td>
+      </tr>
+      <tr>
+        <td>Full serverless (Lambda + API Gateway)</td>
+        <td><span class="pill no">Écarté</span></td>
+        <td>Express 5 + <code>sequelize.sync()</code> et le pooling ne sont pas serverless-native. L'adaptation (cold starts, stratégie de connexion) serait une réécriture non justifiée.</td>
+      </tr>
+    </tbody>
+  </table>
+  </div>
+  <p>ECS Fargate s'impose&nbsp;: l'infrastructure ajoute le placement multi-AZ, l'auto-scaling et un plan de contrôle managé, sans surcoût d'administration système.</p>
+</section>
+
+<section id="schema">
+  <h2 class="sec"><span class="n">4</span>Schéma d'architecture</h2>
+  <p>Le schéma interactif ci-dessous (Excalidraw) présente le VPC à trois tiers, le flux des requêtes et le placement multi-AZ. On peut zoomer et se déplacer à l'intérieur du cadre.</p>
+  <div class="frame">
+    <iframe src="https://excalidraw.com/#json=kGPSnDGijTuGiIzsBpeoC,3wNg8WvL-Xv5hlwDy70Wjw" title="Schéma d'architecture AWS de Conduit" loading="lazy"></iframe>
+    <div class="cap">VPC 10.0.0.0/16 (us-west-2) — Internet → ALB (tier public) → ECS Fargate frontend/backend (tier privé app) → RDS PostgreSQL Multi-AZ (tier privé data).</div>
+  </div>
+  <p>Trois principes structurent ce schéma&nbsp;: (1) <b>l'ALB est le seul composant exposé sur Internet</b>&nbsp;; (2) les tâches applicatives vivent dans des subnets <b>privés sans route Internet</b> (les accès aux services AWS passent par des VPC Endpoints, sans NAT)&nbsp;; (3) la base est <b>isolée</b> dans un troisième tier, joignable uniquement depuis l'app.</p>
+</section>
+
+<section id="technique">
+  <h2 class="sec"><span class="n">5</span>Réseau et composants applicatifs</h2>
+
+  <h3>Découpe du VPC (trois tiers, deux AZ)</h3>
+  <div class="tablewrap">
+  <table>
+    <thead><tr><th>Tier</th><th>AZ</th><th>CIDR</th><th>Contenu</th></tr></thead>
+    <tbody>
+      <tr><td>Public</td><td>2a / 2b</td><td>10.0.0.0/24 · 10.0.1.0/24</td><td>Application Load Balancer</td></tr>
+      <tr><td>Privé app</td><td>2a / 2b</td><td>10.0.10.0/24 · 10.0.11.0/24</td><td>Tâches ECS Fargate</td></tr>
+      <tr><td>Privé data</td><td>2a / 2b</td><td>10.0.20.0/24 · 10.0.21.0/24</td><td>RDS PostgreSQL (primaire/standby)</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p>Les subnets publics routent <code>0.0.0.0/0 → Internet Gateway</code>. Les subnets privés <b>n'ont pas de route par défaut</b> (pas de NAT Gateway).</p>
+  <div class="callout">
+    <p><b>Pourquoi pas de NAT&nbsp;?</b> Conduit n'émet aucun appel sortant Internet à l'exécution&nbsp;: il ne parle qu'à RDS (réseau privé) et tire son image via VPC Endpoint. Supprimer la NAT économise ~32&nbsp;$/mois/AZ et réduit la surface d'attaque (une tâche compromise ne peut ni exfiltrer ni télécharger). Tous les accès AWS passent par des <b>VPC Endpoints</b> internes (ECR, S3, CloudWatch Logs, Secrets Manager).</p>
+  </div>
+
+  <h3>ALB, ECS et RDS</h3>
+  <ul>
+    <li><b>ALB</b> — seul point d'entrée Internet, déployé sur les deux subnets publics. Routage par chemin&nbsp;: <code>/api/*</code> → backend Express :3001 (health <code>GET /api/tags</code>), <code>/*</code> → nginx :80 (health <code>GET /</code>). Le frontend ne fait <b>aucun proxy</b>&nbsp;: c'est l'ALB qui sépare <code>/api/*</code>.</li>
+    <li><b>ECS Fargate</b> — cluster <code>conduit-cluster</code>, deux services dans les subnets privés app, sans IP publique, répartis sur les deux AZ. <code>conduit-frontend</code> (nginx, 2 réplicas) et <code>conduit-backend</code> (Express, 2 → 4 réplicas, auto-scaling CPU cible 60 %), chacun 0,25 vCPU / 512 Mo.</li>
+    <li><b>RDS PostgreSQL 16</b> — <code>db.t4g.micro</code>, 20 Gio gp3 chiffré, <b>Multi-AZ</b> (standby synchrone, bascule &lt; 2 min), <code>publicly_accessible = false</code>. Identifiants générés et stockés dans <b>Secrets Manager</b>.</li>
+  </ul>
+</section>
+
+<section id="securite">
+  <h2 class="sec"><span class="n">6</span>Sécurité et moindre privilège</h2>
+  <h3>Chaîne de groupes de sécurité</h3>
+  <p>Chaque tier n'accepte que le trafic du tier immédiatement en amont — par référence de groupe de sécurité, jamais par plage d'IP&nbsp;:</p>
+<pre><code>Internet ──:80/443──▶ ALB-SG    (entrant 80/443 depuis 0.0.0.0/0)
+                          │
+                          ▼
+                       tasks-SG  (entrant 80 et 3001 UNIQUEMENT depuis ALB-SG)
+                          ├──▶ rds-SG    (entrant 5432 UNIQUEMENT depuis tasks-SG)
+                          └──▶ vpce-SG   (entrant 443  UNIQUEMENT depuis tasks-SG)</code></pre>
+  <p>Seul l'ALB accepte une entrée large (80/443). Une tâche compromise est injoignable depuis Internet et n'atteint la base que par le port 5432 documenté. La connexion RDS est <b>chiffrée en TLS</b> (PostgreSQL 16 impose <code>rds.force_ssl</code>).</p>
+
+  <h3>Rôles IAM</h3>
+  <p>Le modèle nominal sépare le <b>rôle d'exécution ECS</b> (tirer l'image, injecter les secrets, streamer les logs — restreint au seul secret <code>conduit/app</code>) du <b>rôle de tâche</b> (assumé par l'application, <b>aucune permission</b> AWS car Conduit ne parle qu'à RDS via le réseau).</p>
+  <div class="callout warn">
+    <p><b>Contrainte du lab (LabRole).</b> Le compte AWS Academy interdit <code>iam:CreateRole</code>&nbsp;: Terraform ne peut pas créer les deux rôles dédiés et bascule sur le rôle pré-existant <code>LabRole</code> (exécution + tâche). C'est un affaiblissement du moindre privilège <i>au niveau IAM</i> imposé par le lab&nbsp;; dans un compte normal la séparation s'applique sans changer le code. Le moindre privilège <i>réseau</i> (chaîne de SG, isolation des subnets, absence de NAT) reste totalement intact.</p>
+  </div>
+</section>
+
+<section id="resilience">
+  <h2 class="sec"><span class="n">7</span>Résilience, scalabilité, observabilité</h2>
+  <ul>
+    <li><b>Multi-AZ</b> — ALB réparti sur deux AZ&nbsp;; 2 réplicas par service répartis sur les deux AZ (la perte d'une AZ laisse une tâche par service)&nbsp;; RDS standby synchrone à bascule automatique.</li>
+    <li><b>Auto-scaling</b> — target tracking sur le CPU moyen du backend à 60 %&nbsp;: de 2 à 4 tâches selon la charge.</li>
+    <li><b>Health checks &amp; rolling deploys</b> — l'ALB sonde chaque cible toutes les 30 s, retire une cible après 3 échecs&nbsp;; ECS la remplace. Le drainage de 30 s assure des déploiements sans coupure.</li>
+    <li><b>Observabilité</b> — CloudWatch Logs (un groupe par service, rétention 7 j) et Container Insights (CPU/mémoire/réseau par tâche). Les logs ont permis de diagnostiquer les incidents de déploiement.</li>
+  </ul>
+</section>
+
+<section id="academie">
+  <h2 class="sec"><span class="n">8</span>Contraintes du compte académique</h2>
+  <p>Le compte <code>voclabs</code> impose des limites, vérifiées avant le déploiement&nbsp;:</p>
+  <div class="tablewrap">
+  <table>
+    <thead><tr><th>Capacité</th><th>État</th><th>Conséquence</th></tr></thead>
+    <tbody>
+      <tr><td>Créer VPC, ECS, RDS, ALB, ECR, Secrets Manager, CloudWatch</td><td><span class="pill ok">Autorisé</span></td><td>Architecture déployable telle quelle.</td></tr>
+      <tr><td><i>service-linked roles</i> + <code>iam:PassRole</code> sur LabRole</td><td><span class="pill ok">Autorisé</span></td><td>ECS assume LabRole&nbsp;; rôles liés créés au premier <code>apply</code>.</td></tr>
+      <tr><td><code>iam:CreateRole</code> / provider OIDC</td><td><span class="pill no">Refusé</span></td><td>Rôles dédiés impossibles → LabRole&nbsp;; CI/CD OIDC impossible → déploiement manuel.</td></tr>
+      <tr><td>Identifiants STS temporaires</td><td><span class="pill mid">Expirent</span></td><td>À rafraîchir à chaque session.</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p>Conséquence&nbsp;: <b>le déploiement est manuel</b> (pas de CI/CD fédéré), car le compte interdit les permissions IAM requises par l'OIDC. C'est un choix de périmètre assumé, non une fonctionnalité manquante.</p>
+
+  <h3>Problèmes rencontrés et résolus</h3>
+  <p>Trois incidents, tous diagnostiqués via CloudWatch Logs puis corrigés — le réseau a fonctionné dès le départ, seules des configurations applicatives ont été ajustées&nbsp;:</p>
+  <div class="tablewrap">
+  <table>
+    <thead><tr><th>Symptôme</th><th>Cause</th><th>Correctif</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><code>/api/tags</code> → 500 (<span style="color:var(--muted)">no encryption</span>)</td>
+        <td>PostgreSQL 16 impose TLS&nbsp;; Sequelize se connectait en clair (le réseau, lui, joignait déjà RDS).</td>
+        <td>SSL côté client via <code>PROD_DB_SSL=true</code> dans la task definition.</td>
+      </tr>
+      <tr>
+        <td>Service frontend&nbsp;: 0 tâche (<span style="color:var(--muted)">CannotPullContainer</span>)</td>
+        <td>Image frontend pas encore poussée (token STS expiré) à la création du service.</td>
+        <td>Push de l'image puis <code>ecs update-service --force-new-deployment</code>.</td>
+      </tr>
+      <tr>
+        <td>Tâches frontend en boucle de redémarrage</td>
+        <td>nginx résolvait <code>proxy_pass http://backend:3001</code> (nom docker-compose) au démarrage → introuvable dans Fargate.</td>
+        <td>Suppression du bloc <code>location /api/</code>&nbsp;: derrière l'ALB, nginx ne sert que la SPA.</td>
+      </tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<section id="validation">
+  <h2 class="sec"><span class="n">9</span>Validation et coûts</h2>
+  <p>Validation de bout en bout sur l'URL publique de l'ALB. Les deux services ECS sont sains et répartis sur les deux AZ.</p>
+  <div class="tablewrap">
+  <table>
+    <thead><tr><th>Test</th><th>Résultat</th><th>Preuve</th></tr></thead>
+    <tbody>
+      <tr><td><code>GET /</code></td><td><span class="pill ok">200</span></td><td>SPA React servie par nginx via l'ALB.</td></tr>
+      <tr><td><code>GET /api/tags</code></td><td><span class="pill ok">200</span> <code>{"tags":[]}</code></td><td>Chaîne complète Internet → ALB → Express → <b>RDS en TLS</b>.</td></tr>
+      <tr><td><code>POST /api/users</code></td><td><span class="pill mid">422</span></td><td>Utilisateur de test créé antérieurement et <b>survivant aux redéploiements</b> → persistance RDS confirmée.</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="grid2">
+    <div>
+      <h3>Coût estimé (en fonctionnement)</h3>
+      <div class="tablewrap">
+      <table>
+        <thead><tr><th>Composant</th><th>~ Coût</th></tr></thead>
+        <tbody>
+          <tr><td>Application Load Balancer</td><td>~0,70 $/j</td></tr>
+          <tr><td>RDS db.t4g.micro Multi-AZ</td><td>~1,10 $/j</td></tr>
+          <tr><td>VPC Endpoints (interface)</td><td>~0,36 $/j</td></tr>
+          <tr><td>Tâches Fargate</td><td>~0,15 $/j</td></tr>
+          <tr><td><b>Total</b></td><td><b>~2–3 $/j</b></td></tr>
+        </tbody>
+      </table>
+      </div>
+    </div>
+    <div>
+      <h3>Extensions futures</h3>
+      <ul>
+        <li><b>HTTPS</b> — le SG de l'ALB pré-admet déjà 443&nbsp;: attacher un certificat ACM et rediriger 80 → 443.</li>
+        <li><b>Troisième AZ</b> — le code (<code>count</code>/<code>for_each</code>) supporte l'ajout d'une AZ.</li>
+        <li><b>État Terraform distant</b> — backend S3 + verrou DynamoDB pour le travail collaboratif.</li>
+        <li><b>Endpoint <code>/health</code> dédié</b> — découpler le health check du backend de la base.</li>
+      </ul>
+    </div>
+  </div>
+  <div class="callout ok">
+    <p><b>Conclusion.</b> L'application est <b>pleinement opérationnelle</b> sur l'infrastructure cible&nbsp;: frontend servi, API fonctionnelle, PostgreSQL accessible en TLS et persistante, le tout réparti sur deux AZ avec auto-scaling et isolation réseau à trois tiers.</p>
+  </div>
+</section>
+
+<footer>
+  Rapport académique Conduit — Architecture AWS ECS Fargate · us-west-2
+</footer>
+
+</div>
+</body>
+</html>

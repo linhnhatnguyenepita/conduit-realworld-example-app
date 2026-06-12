@@ -1,0 +1,21 @@
+# OPTIONAL. With AWS Academy credentials you do NOT need this file at all:
+#   - lab_role_arn is auto-derived as arn:aws:iam::<your-account>:role/LabRole
+#   - jwt_key is auto-generated if left empty
+# Just set valid credentials + region and run terraform (see infra/README.md).
+#
+# Copy to terraform.tfvars only if you want to override a default.
+# terraform.tfvars is gitignored (it may hold the JWT secret); this .example is committed.
+
+# Pin a stable JWT signing key instead of the auto-generated one:
+# jwt_key = "a-long-random-string"
+
+# Override the auto-derived LabRole ARN (rarely needed):
+# lab_role_arn = "arn:aws:iam::123456789012:role/LabRole"
+
+# Create dedicated least-privilege IAM roles instead of reusing LabRole.
+# Only works in a non-academy account that allows iam:CreateRole:
+# use_lab_role = false
+
+# Other overridable defaults (see variables.tf): region, vpc_cidr, azs,
+# public/app/data_subnet_cidrs, db_name, db_username, db_instance_class.
+# region = "us-east-1"

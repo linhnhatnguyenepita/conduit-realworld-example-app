@@ -27,5 +27,13 @@ module.exports = {
     host: process.env.PROD_DB_HOSTNAME,
     dialect: process.env.PROD_DB_DIALECT,
     logging: logging(process.env.PROD_DB_LOGGING),
+    // RDS PostgreSQL 16 enforces TLS (rds.force_ssl=1), so the client must
+    // connect over SSL or the server rejects it with a pg_hba.conf error.
+    // rejectUnauthorized is false because we don't bundle the AWS RDS CA — the
+    // link is still encrypted; full chain verification is a hardening follow-up.
+    dialectOptions:
+      process.env.PROD_DB_SSL === "true"
+        ? { ssl: { require: true, rejectUnauthorized: false } }
+        : undefined,
   },
 };
