@@ -1,0 +1,50 @@
+name: Uptime check
+
+# Optional: pings the deployed app's health endpoint on a schedule and opens
+# an issue if it's down. Set the HEALTHCHECK_URL repo variable (Settings >
+# Variables) once the app is deployed (Ansible/Terraform AWS phase). Until
+# then this workflow no-ops.
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check health endpoint
+        id: check
+        run: |
+          URL="${{ vars.HEALTHCHECK_URL }}"
+          if [ -z "$URL" ]; then
+            echo "HEALTHCHECK_URL not set — skipping."
+            echo "skipped=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 "$URL" || echo 000)
+          echo "Health check $URL -> $code"
+          if [ "$code" != "200" ]; then
+            echo "status=down" >> "$GITHUB_OUTPUT"
+          else
+            echo "status=up" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Open issue on failure
+        if: steps.check.outputs.status == 'down'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const url = "${{ vars.HEALTHCHECK_URL }}";
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `🔴 Uptime check failed: ${url}`,
+              body: `The health check for \`${url}\` did not return 200 at ${new Date().toISOString()}.`,
+              labels: ["uptime", "incident"],
+            });

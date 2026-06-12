@@ -1,0 +1,20 @@
+# Build context is the repo root for both backend and frontend images
+# (workspace builds need the root package-lock.json).
+**/node_modules
+**/dist
+**/build
+**/coverage
+**/npm-debug.log
+.git
+.gitignore
+.github
+.env
+.env.*
+!.env.example
+**/*.test.js
+**/*.test.jsx
+docs
+monitoring
+.claude
+.codegraph
+*.md

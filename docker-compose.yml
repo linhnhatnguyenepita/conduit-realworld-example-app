@@ -1,0 +1,79 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${PROD_DB_USERNAME:-conduit}
+      POSTGRES_PASSWORD: ${PROD_DB_PASSWORD:-conduit}
+      POSTGRES_DB: ${PROD_DB_NAME:-conduit}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${PROD_DB_USERNAME:-conduit}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks: [conduit]
+
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    environment:
+      NODE_ENV: production
+      PORT: 3001
+      JWT_KEY: ${JWT_KEY:-dev-secret-change-me}
+      PROD_DB_USERNAME: ${PROD_DB_USERNAME:-conduit}
+      PROD_DB_PASSWORD: ${PROD_DB_PASSWORD:-conduit}
+      PROD_DB_NAME: ${PROD_DB_NAME:-conduit}
+      PROD_DB_HOSTNAME: postgres
+      PROD_DB_DIALECT: postgres
+      PROD_DB_LOGGING: "false"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    expose:
+      - "3001"
+    networks: [conduit]
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    ports:
+      - "8080:80"
+    depends_on:
+      - backend
+    networks: [conduit]
+
+  prometheus:
+    image: prom/prometheus:latest
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    ports:
+      - "9090:9090"
+    depends_on:
+      - backend
+    networks: [conduit]
+
+  grafana:
+    image: grafana/grafana:latest
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    volumes:
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana-data:/var/lib/grafana
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
+    networks: [conduit]
+
+volumes:
+  pgdata:
+  grafana-data:
+
+networks:
+  conduit:
+    driver: bridge

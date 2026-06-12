@@ -5,6 +5,7 @@ const express = require("express");
 const cors = require("cors");
 const { sequelize } = require("./models");
 const errorHandler = require("./middleware/errorHandler");
+const { metricsMiddleware, metricsHandler } = require("./middleware/metrics");
 
 const usersRoutes = require("./routes/users");
 const userRoutes = require("./routes/user");
@@ -15,6 +16,17 @@ const tagsRoutes = require("./routes/tags");
 const app = express();
 app.use(cors());
 app.use(express.json());
+app.use(metricsMiddleware);
+
+// Observability endpoints — public, no auth, must precede guarded routers.
+app.get("/metrics", metricsHandler);
+app.get("/api/health", (req, res) =>
+  res.json({
+    status: "ok",
+    uptime: process.uptime(),
+    timestamp: new Date().toISOString(),
+  }),
+);
 
 (async () => {
   try {
